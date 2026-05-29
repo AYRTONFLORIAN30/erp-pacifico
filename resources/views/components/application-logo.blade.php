@@ -1,0 +1,1 @@
+<img src="{{ asset('img/logo.webp') }}" alt="Logo Pacífico" {{ $attributes }}>
