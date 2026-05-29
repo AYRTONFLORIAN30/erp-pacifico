@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 
-// 🔓 RUTA DE EMERGENCIA LIBRE (Corregida con la sintaxis exacta de Artisan en código)
-Route::get('/migrar-base-de-datos-papi', function() {
+// 🔓 RUTA DE EMBARQUE DEFINITIVA (Nombre único para evitar conflicto de métodos HTTP)
+Route::get('/limpiar-y-migrar-todo-el-sistema', function() {
     try {
         Artisan::call('migrate:fresh', [
             '--seed' => true,
             '--force' => true
         ]);
-        return '¡Base de datos creada y con seeders listos mano! Ya puedes volver al inicio.';
+        return '¡BASE DE DATOS CONFIGURADA CON ÉXITO MANO! Ya puedes volver al inicio.';
     } catch (\Exception $e) {
         return 'Error al migrar: ' . $e->getMessage();
     }
