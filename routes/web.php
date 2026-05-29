@@ -5,22 +5,28 @@ use App\Http\Controllers\EgresosController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\InventarioController;
-use App\Http\Controllers\DashboardController; // Importado para el nuevo Dashboard
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Artisan; // ✅ IMPORTANTE: Añadido para que funcione la ruta de emergencia
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
+
+// 🔓 RUTA DE EMERGENCIA LIBRE (Pégala aquí arriba para que no pida Login)
+Route::get('/migrar-base-de-datos-papi', function() {
+    try {
+        Artisan::call('migrate:fresh --seed --force');
+        return '¡Base de datos creada y con seeders listos mano! Ya puedes volver al inicio.';
+    } catch (\Exception $e) {
+        return 'Error al migrar: ' . $e->getMessage();
+    }
+});
 
 Route::get('/', function () {
     if (Auth::check()) {
         $rol = Auth::user()->rol;
-        
-        // Admin y Ventas entran directo al Dashboard al iniciar sesión
         if ($rol === 'admin' || $rol === 'ventas') return redirect()->route('dashboard');
-        
         if ($rol === 'egresos') return redirect()->route('egresos.index');
         if ($rol === 'almacen') return redirect()->route('inventario.index');
-        
         return redirect()->route('en_construccion');
     }
     return redirect()->route('login');
@@ -33,34 +39,27 @@ Route::get('/construccion', function () {
 Route::middleware('auth')->group(function () {
     
     // --- PERFIL DE USUARIO ---
-    Mr::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // --- DASHBOARD VISUAL (GRÁFICOS) CON REDIRECCIÓN INTELIGENTE ---
+    // --- DASHBOARD VISUAL (GRÁFICOS) ---
     Route::get('/dashboard', function (Request $request) {
         $rol = Auth::user()->rol;
-        
-        // 🚫 BLOQUEAMOS SOLO A EGRESOS Y ALMACÉN
         if ($rol === 'egresos') {
             return redirect()->route('egresos.index');
         } elseif ($rol === 'almacen') {
             return redirect()->route('inventario.index');
         }
-
-        // ✅ PERMITIMOS EL PASO A ADMIN Y VENTAS PARA VER LOS GRÁFICOS
         return app(DashboardController::class)->index($request);
-        
     })->name('dashboard');
 
     // --- ZONA DE CAJA / EGRESOS ---
-    // 🚀 Rutas personalizadas (Buscar RUC e Importar Excel) VAN ANTES del resource
     Route::get('/egresos/buscar-ruc', [EgresosController::class, 'buscarRuc'])->name('egresos.buscarRuc');
     Route::post('/egresos/importar-proveedores', [EgresosController::class, 'importarProveedores'])->name('egresos.importar_proveedores');
     Route::resource('egresos', EgresosController::class);
 
     // --- ZONA DE VENTAS INTERNAS ---
-    // Incluye: index, create, store, edit, update y destroy (anular)
     Route::resource('ventas', VentaController::class);
 
     // --- ZONA DE GASTOS OPERATIVOS DE PLANTA ---
@@ -83,28 +82,13 @@ Route::middleware('auth')->group(function () {
     // --- ZONA DE CLIENTES ---
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
     Route::post('/clientes/importar', [ClienteController::class, 'import'])->name('clientes.import');
-    
-    // RUTA API PARA EL BUSCADOR DE CLIENTES POR RUC (VENTAS)
     Route::get('/api/buscar-cliente/{ruc}', [ClienteController::class, 'buscarPorRuc']);
     
     // Rutas para notificaciones
     Route::get('/notificaciones', [VentaController::class, 'getNotificaciones'])->name('notificaciones.index');
     Route::post('/notificaciones/{id}/leer', [VentaController::class, 'marcarAsRead'])->name('notificaciones.leer');
-    
-    // Ruta rápida para marcar una venta como cobrada/cancelada
     Route::post('/ventas/{id}/cancelar-credito', [VentaController::class, 'cancelarCredito'])->name('ventas.cancelar_credito');
 
-    // --- RUTA DE EMERGENCIA PARA SERVIDOR (MIGRACIONES) ---
-    Route::get('/migrar-base-de-datos-papi', function() {
-        try {
-            // Se usa fresh para limpiar cualquier residuo y estructurar desde cero de forma segura
-            Artisan::call('migrate:fresh --seed --force');
-            return '¡Base de datos creada y con seeders listos mano! Ya puedes volver al inicio.';
-        } catch (\Exception $e) {
-            return 'Error al migrar: ' . $e->getMessage();
-        }
-    });
-
-}); // ✅ Cierre correcto del grupo de middleware 'auth'
+});
 
 require __DIR__.'/auth.php';
