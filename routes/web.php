@@ -8,6 +8,7 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\DashboardController; // Importado para el nuevo Dashboard
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan; // ✅ IMPORTANTE: Añadido para que funcione la ruta de emergencia
 use Illuminate\Http\Request;
 
 Route::get('/', function () {
@@ -32,7 +33,7 @@ Route::get('/construccion', function () {
 Route::middleware('auth')->group(function () {
     
     // --- PERFIL DE USUARIO ---
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Mr::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
@@ -67,11 +68,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/gastos', [VentaController::class, 'storeGasto'])->name('gastos.store');
     Route::delete('/gastos/{id}', [VentaController::class, 'destroyGasto'])->name('gastos.destroy');
 
-    // --- ZONA DE VENTAS EXTERNAS (AQUÍ ESTÁ LA CORRECCIÓN) ---
+    // --- ZONA DE VENTAS EXTERNAS ---
     Route::get('/ventas-externas/crear', [VentaController::class, 'createFuera'])->name('ventas_fuera.create');
     Route::post('/ventas-externas', [VentaController::class, 'storeFuera'])->name('ventas_fuera.store');
-    Route::get('/ventas-externas/{id}/editar', [VentaController::class, 'editFuera'])->name('ventas_fuera.edit'); // NUEVO: Ruta para abrir el formulario
-    Route::put('/ventas-externas/{id}', [VentaController::class, 'updateFuera'])->name('ventas_fuera.update'); // NUEVO: Ruta para guardar los cambios
+    Route::get('/ventas-externas/{id}/editar', [VentaController::class, 'editFuera'])->name('ventas_fuera.edit'); 
+    Route::put('/ventas-externas/{id}', [VentaController::class, 'updateFuera'])->name('ventas_fuera.update'); 
     Route::delete('/ventas-externas/{id}', [VentaController::class, 'destroyFuera'])->name('ventas_fuera.destroy');
 
     // --- ZONA DE ALMACÉN / INVENTARIO ---
@@ -86,14 +87,24 @@ Route::middleware('auth')->group(function () {
     // RUTA API PARA EL BUSCADOR DE CLIENTES POR RUC (VENTAS)
     Route::get('/api/buscar-cliente/{ruc}', [ClienteController::class, 'buscarPorRuc']);
     
-
     // Rutas para notificaciones
     Route::get('/notificaciones', [VentaController::class, 'getNotificaciones'])->name('notificaciones.index');
     Route::post('/notificaciones/{id}/leer', [VentaController::class, 'marcarAsRead'])->name('notificaciones.leer');
     
     // Ruta rápida para marcar una venta como cobrada/cancelada
     Route::post('/ventas/{id}/cancelar-credito', [VentaController::class, 'cancelarCredito'])->name('ventas.cancelar_credito');
-});
+
+    // --- RUTA DE EMERGENCIA PARA SERVIDOR (MIGRACIONES) ---
+    Route::get('/migrar-base-de-datos-papi', function() {
+        try {
+            // Se usa fresh para limpiar cualquier residuo y estructurar desde cero de forma segura
+            Artisan::call('migrate:fresh --seed --force');
+            return '¡Base de datos creada y con seeders listos mano! Ya puedes volver al inicio.';
+        } catch (\Exception $e) {
+            return 'Error al migrar: ' . $e->getMessage();
+        }
+    });
+
+}); // ✅ Cierre correcto del grupo de middleware 'auth'
 
 require __DIR__.'/auth.php';
-
